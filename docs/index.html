@@ -129,7 +129,7 @@ function aplica(){
     if(state.fonte && a.source!==state.fonte) return false;
     if(state.periodico && a.journal!==state.periodico) return false;
     if(state.periodo){
-      const base = a.added || a.pub_date;
+      const base = a.pub_date || a.added;   // filtra pela data de PUBLICAÇÃO
       if(diasDesde(base) > state.periodo) return false;
     }
     if(q){
@@ -141,7 +141,7 @@ function aplica(){
   if(state.ordem==="relevancia"){
     arr.sort((x,y)=>(y.relevance||0)-(x.relevance||0) || (y.pub_date||"").localeCompare(x.pub_date||""));
   } else {
-    arr.sort((x,y)=>((y.added||y.pub_date||"")).localeCompare(x.added||x.pub_date||"") || (y.pub_date||"").localeCompare(x.pub_date||""));
+    arr.sort((x,y)=>(y.pub_date||y.added||"").localeCompare(x.pub_date||x.added||"") || (y.added||"").localeCompare(x.added||""));
   }
   render(arr);
 }
