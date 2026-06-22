@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigilância de Literatura — Ombro e Cotovelo</title>
+<style>
+  :root{
+    --azul:#0b5394; --azul-claro:#eef6ff; --texto:#1f2933; --suave:#667085;
+    --borda:#e4e7ec; --fundo:#f4f5f7; --card:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fundo);color:var(--texto);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       line-height:1.5}
+  a{color:var(--azul);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  header{background:var(--azul);color:#fff;padding:22px 18px}
+  .wrap{max-width:880px;margin:0 auto}
+  header h1{margin:0;font-size:22px;font-weight:700}
+  header .sub{font-size:13px;opacity:.9;margin-top:4px}
+
+  .controls{position:sticky;top:0;z-index:10;background:var(--fundo);
+            border-bottom:1px solid var(--borda);padding:12px 18px}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:880px;margin:0 auto}
+  #busca{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--borda);
+         border-radius:8px;font-size:15px;background:#fff}
+  select{padding:9px 10px;border:1px solid var(--borda);border-radius:8px;background:#fff;font-size:14px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{padding:7px 12px;border:1px solid var(--borda);border-radius:20px;background:#fff;
+        cursor:pointer;font-size:13px;color:var(--suave);user-select:none}
+  .chip.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+  .count{max-width:880px;margin:10px auto 0;padding:0 18px;font-size:13px;color:var(--suave)}
+
+  main{max-width:880px;margin:0 auto;padding:8px 18px 60px}
+  .card{background:var(--card);border:1px solid var(--borda);border-radius:10px;
+        padding:14px 16px;margin:12px 0}
+  .card h2{margin:0 0 4px;font-size:16px;font-weight:600;line-height:1.35}
+  .authors{font-size:13px;color:#475467;margin-bottom:2px}
+  .meta{font-size:12px;color:var(--suave);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:8px}
+  .tag{display:inline-block;padding:1px 7px;border-radius:12px;font-size:11px;font-weight:600}
+  .tag.ombro{background:#e7f0ff;color:#1d4ed8}
+  .tag.cotovelo{background:#fef3e7;color:#b45309}
+  .tag.ambos{background:#ecfdf3;color:#067647}
+  .tag.geral{background:#f2f4f7;color:#475467}
+  .tag.src{background:#f2f4f7;color:#475467}
+  .rel{color:#067647;font-weight:600}
+  .resumo{background:var(--azul-claro);border-left:3px solid var(--azul);border-radius:4px;
+          padding:8px 10px;margin:8px 0;font-size:14px}
+  .abs{font-size:13.5px;color:#344054}
+  .abs.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  .toggle{font-size:12px;color:var(--azul);cursor:pointer;margin-top:4px;display:inline-block}
+  .doi{font-size:12px;color:var(--suave);margin-top:8px}
+  .empty{text-align:center;color:var(--suave);padding:60px 20px}
+  footer{max-width:880px;margin:0 auto;padding:0 18px 40px;font-size:11px;color:#98a2b3}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Vigilância de Literatura — Ombro e Cotovelo</h1>
+    <div class="sub" id="sub">carregando…</div>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="row">
+    <input id="busca" type="search" placeholder="Buscar por título, autor, periódico, abstract…" autocomplete="off">
+    <select id="fonte"><option value="">Todas as fontes</option></select>
+    <select id="periodico"><option value="">Todos os periódicos</option></select>
+    <select id="ordem">
+      <option value="recentes">Mais recentes</option>
+      <option value="relevancia">Relevância</option>
+    </select>
+    <select id="periodo">
+      <option value="0">Todo o período</option>
+      <option value="7">Últimos 7 dias</option>
+      <option value="30">Últimos 30 dias</option>
+      <option value="90">Últimos 90 dias</option>
+    </select>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <div class="chips" id="subtemas">
+      <span class="chip on" data-sub="">Todas</span>
+      <span class="chip" data-sub="Ombro">Ombro</span>
+      <span class="chip" data-sub="Cotovelo">Cotovelo</span>
+      <span class="chip" data-sub="Ombro e Cotovelo">Ombro e Cotovelo</span>
+      <span class="chip" data-sub="Geral">Geral</span>
+    </div>
+  </div>
+</div>
+
+<div class="count" id="count"></div>
+<main id="lista"></main>
+<footer>
+  Apenas metadados abertos (título, autores, periódico, data, abstract, DOI/URL).
+  Fontes: PubMed, SciELO, OpenAlex. Atualizado automaticamente pelo agente.
+</footer>
+
+<script>
+const state = { sub:"", fonte:"", periodico:"", ordem:"recentes", periodo:0, q:"" };
+let DADOS = [];
+
+const norm = s => (s||"").toString().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const esc = s => (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function autoresStr(a, lim=10){
+  if(!a || !a.length) return "—";
+  if(a.length<=lim) return a.join(", ");
+  return a.slice(0,lim).join(", ") + " et al. (+"+(a.length-lim)+")";
+}
+function subClass(s){
+  if(s==="Ombro") return "ombro";
+  if(s==="Cotovelo") return "cotovelo";
+  if(s==="Ombro e Cotovelo") return "ambos";
+  return "geral";
+}
+function diasDesde(d){
+  if(!d) return Infinity;
+  const t = Date.parse(d); if(isNaN(t)) return Infinity;
+  return (Date.now()-t)/86400000;
+}
+
+function aplica(){
+  const q = norm(state.q);
+  let arr = DADOS.filter(a=>{
+    if(state.sub && a.subtema!==state.sub) return false;
+    if(state.fonte && a.source!==state.fonte) return false;
+    if(state.periodico && a.journal!==state.periodico) return false;
+    if(state.periodo){
+      const base = a.added || a.pub_date;
+      if(diasDesde(base) > state.periodo) return false;
+    }
+    if(q){
+      const hay = norm((a.title||"")+" "+(a.abstract||"")+" "+((a.authors||[]).join(" "))+" "+(a.journal||"")+" "+(a.summary_pt||""));
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  if(state.ordem==="relevancia"){
+    arr.sort((x,y)=>(y.relevance||0)-(x.relevance||0) || (y.pub_date||"").localeCompare(x.pub_date||""));
+  } else {
+    arr.sort((x,y)=>((y.added||y.pub_date||"")).localeCompare(x.added||x.pub_date||"") || (y.pub_date||"").localeCompare(x.pub_date||""));
+  }
+  render(arr);
+}
+
+function render(arr){
+  document.getElementById("count").textContent =
+    arr.length + " artigo" + (arr.length===1?"":"s") + (DADOS.length?(" de "+DADOS.length):"");
+  const main = document.getElementById("lista");
+  if(!arr.length){
+    main.innerHTML = '<div class="empty">Nenhum artigo com esses filtros.<br>'
+      + (DADOS.length? "Ajuste a busca ou os filtros." : "O agente ainda não rodou — assim que rodar, os artigos aparecem aqui.")
+      + '</div>';
+    return;
+  }
+  main.innerHTML = arr.map((a,i)=>{
+    const rel = a.relevance ? '<span class="rel">relevância '+Math.round(a.relevance*100)+'%</span>' : '';
+    const resumo = a.summary_pt ? '<div class="resumo"><strong>Resumo (IA):</strong> '+esc(a.summary_pt)+'</div>' : '';
+    const abs = a.abstract ? esc(a.abstract) : '<span style="color:#98a2b3">(sem abstract disponível)</span>';
+    const longo = (a.abstract||"").length > 320;
+    const doi = a.doi ? '<div class="doi">DOI: <a href="https://doi.org/'+esc(a.doi)+'" target="_blank" rel="noopener">'+esc(a.doi)+'</a></div>' : '';
+    const titulo = a.url ? '<a href="'+esc(a.url)+'" target="_blank" rel="noopener">'+esc(a.title)+'</a>' : esc(a.title);
+    return '<article class="card">'
+      + '<h2>'+titulo+'</h2>'
+      + '<div class="authors">'+esc(autoresStr(a.authors))+'</div>'
+      + '<div class="meta">'
+        + '<span class="tag '+subClass(a.subtema)+'">'+esc(a.subtema||"Geral")+'</span>'
+        + '<span>'+esc(a.journal||"—")+'</span>'
+        + (a.pub_date?'<span>'+esc(a.pub_date)+'</span>':'')
+        + '<span class="tag src">'+esc(a.source||"")+'</span>'
+        + rel
+      + '</div>'
+      + resumo
+      + '<div class="abs '+(longo?'clamp':'')+'" id="abs'+i+'">'+abs+'</div>'
+      + (longo?'<span class="toggle" data-i="'+i+'">mostrar mais ▾</span>':'')
+      + doi
+      + '</article>';
+  }).join("");
+
+  main.querySelectorAll(".toggle").forEach(t=>{
+    t.onclick = ()=>{
+      const el = document.getElementById("abs"+t.dataset.i);
+      const cl = el.classList.toggle("clamp");
+      t.textContent = cl ? "mostrar mais ▾" : "mostrar menos ▴";
+    };
+  });
+}
+
+function popular(sel, valores){
+  const el = document.getElementById(sel);
+  [...new Set(valores)].filter(Boolean).sort((a,b)=>a.localeCompare(b)).forEach(v=>{
+    const o = document.createElement("option"); o.value=v; o.textContent=v; el.appendChild(o);
+  });
+}
+
+// Eventos
+let tBusca;
+document.getElementById("busca").addEventListener("input", e=>{
+  clearTimeout(tBusca); tBusca=setTimeout(()=>{ state.q=e.target.value; aplica(); }, 180);
+});
+["fonte","periodico","ordem","periodo"].forEach(id=>{
+  document.getElementById(id).addEventListener("change", e=>{
+    state[id] = id==="periodo" ? parseInt(e.target.value,10) : e.target.value; aplica();
+  });
+});
+document.getElementById("subtemas").addEventListener("click", e=>{
+  if(!e.target.classList.contains("chip")) return;
+  document.querySelectorAll("#subtemas .chip").forEach(c=>c.classList.remove("on"));
+  e.target.classList.add("on"); state.sub = e.target.dataset.sub; aplica();
+});
+
+// Carregamento
+Promise.all([
+  fetch("data/articles.json").then(r=>r.ok?r.json():[]).catch(()=>[]),
+  fetch("data/meta.json").then(r=>r.ok?r.json():null).catch(()=>null),
+]).then(([dados, meta])=>{
+  DADOS = Array.isArray(dados)?dados:[];
+  popular("fonte", DADOS.map(a=>a.source));
+  popular("periodico", DADOS.map(a=>a.journal));
+  const sub = document.getElementById("sub");
+  if(meta){
+    sub.textContent = "Atualizado em "+meta.generated_at+" · "+meta.total+" artigo(s) no histórico";
+  } else {
+    sub.textContent = DADOS.length+" artigo(s) no histórico";
+  }
+  aplica();
+});
+</script>
+</body>
+</html>

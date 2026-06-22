@@ -1,0 +1,16 @@
+# Saídas locais (o digest também vira artifact do Actions)
+output/
+
+# NÃO ignore docs/data — é o histórico do dashboard, versionado de propósito.
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# SO / editor
+.DS_Store
+.idea/
+.vscode/

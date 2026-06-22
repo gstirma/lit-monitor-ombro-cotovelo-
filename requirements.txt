@@ -1,0 +1,4 @@
+requests>=2.31
+PyYAML>=6.0
+# Opcional — só necessário se anthropic.enabled = true no config.yaml.
+anthropic>=0.40

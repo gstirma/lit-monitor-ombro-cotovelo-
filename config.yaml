@@ -1,0 +1,133 @@
+# =============================================================================
+# Configuração do agente de vigilância de literatura — Ombro e Cotovelo
+# Tudo aqui é editável. Segredos (chaves/senhas) NÃO ficam aqui — ver README.
+# =============================================================================
+
+# Janela de busca: pega artigos dos últimos N dias.
+window_days: 3
+
+# Dashboard (GitHub Pages). O articles.json é também a "memória" de dedup entre
+# execuções e é versionado no repositório (servido pelo Pages a partir de /docs).
+dashboard:
+  data_path: docs/data/articles.json
+  meta_path: docs/data/meta.json
+  max_items: 5000   # nº máximo de artigos guardados no histórico
+
+# Liga/desliga cada fonte.
+sources:
+  pubmed: true
+  scielo: true
+  openalex: true
+
+# -----------------------------------------------------------------------------
+# Termos de busca (editáveis)
+# -----------------------------------------------------------------------------
+search:
+  shoulder:
+    - shoulder
+    - rotator cuff
+    - glenohumeral
+    - acromioclavicular
+    - shoulder instability
+    - shoulder arthroplasty
+    - biceps tendon
+    - SLAP lesion
+    - subacromial
+  elbow:
+    - elbow
+    - distal humerus
+    - olecranon
+    - epicondylitis
+    - ulnar collateral ligament
+    - elbow instability
+    - radial head
+    - elbow arthroplasty
+  # Termos MeSH (PubMed) — já incluem o qualificador [Mesh].
+  mesh:
+    - '"Shoulder"[Mesh]'
+    - '"Rotator Cuff"[Mesh]'
+    - '"Shoulder Joint"[Mesh]'
+    - '"Elbow"[Mesh]'
+    - '"Elbow Joint"[Mesh]'
+
+# -----------------------------------------------------------------------------
+# Periódicos (editáveis)
+#   name        -> usado no PubMed no campo [Journal]
+#   scielo_set  -> set OAI-PMH no SciELO (em geral o ISSN). Verifique com ListSets
+#                  (ver README). Só periódicos indexados no SciELO precisam disso.
+#   issn        -> apenas referência/documentação.
+# ATENÇÃO: confirme os ISSNs/sets antes de confiar 100% (ver README).
+# -----------------------------------------------------------------------------
+journals:
+  - name: "Journal of Shoulder and Elbow Surgery"
+    issn: "1058-2746"
+  - name: "JSES International"
+    issn: "2666-6383"
+  - name: "Shoulder & Elbow"
+    issn: "1758-5732"
+  - name: "Arthroscopy"
+    issn: "0749-8063"
+  - name: "The American Journal of Sports Medicine"
+    issn: "0363-5465"
+  - name: "The Bone & Joint Journal"
+    issn: "2049-4394"
+  - name: "The Journal of Bone and Joint Surgery. American volume"
+    issn: "0021-9355"
+  - name: "Revista Brasileira de Ortopedia"
+    issn: "0102-3616"
+    scielo_set: "0102-3616"   # confirme com ?verb=ListSets (ver README)
+
+# -----------------------------------------------------------------------------
+# PubMed
+# -----------------------------------------------------------------------------
+pubmed:
+  retmax: 200
+  # true  -> restringe a busca à lista 'journals' acima (mais preciso, menos volume)
+  # false -> busca em todo o PubMed pelos termos (mais cobertura)
+  restrict_to_journals: false
+
+# -----------------------------------------------------------------------------
+# SciELO (OAI-PMH)
+# -----------------------------------------------------------------------------
+scielo:
+  # Endpoint OAI-PMH atual da SciELO (o antigo www.scielo.br/oai/scielo-oai.php
+  # foi desativado). Os sets são por ISSN (ex.: 0102-3616) ou coleção (com_*).
+  endpoint: "https://oai.scielo.org/request"
+  # Sets extras além dos definidos em 'journals' (ISSNs), se quiser.
+  extra_sets: []
+
+# -----------------------------------------------------------------------------
+# OpenAlex (REST, polite pool via mailto)
+# -----------------------------------------------------------------------------
+openalex:
+  mailto: "drstirma@gmail.com"   # usado também como 'email' nas E-utilities
+  max_pages: 5                    # páginas de 200 resultados por termo
+  # Frases específicas (evite "shoulder"/"elbow" sozinhos — trazem muito ruído).
+  search_terms:
+    - rotator cuff
+    - glenohumeral
+    - shoulder instability
+    - shoulder arthroplasty
+    - acromioclavicular
+    - SLAP lesion
+    - subacromial
+    - epicondylitis
+    - olecranon
+    - ulnar collateral ligament
+    - radial head
+    - elbow arthroplasty
+
+# -----------------------------------------------------------------------------
+# Enriquecimento por IA (opcional, recomendado) — usa ANTHROPIC_API_KEY (secret)
+# -----------------------------------------------------------------------------
+anthropic:
+  enabled: true
+  model: "claude-haiku-4-5-20251001"   # rápido e econômico p/ resumir abstracts
+  max_items: 80                         # teto de artigos enviados à IA por execução
+
+# -----------------------------------------------------------------------------
+# E-mail (credenciais via secrets; destinatário pode ficar aqui ou em EMAIL_TO)
+# -----------------------------------------------------------------------------
+email:
+  to: "drstirma@gmail.com"
+  send_if_empty: false   # true = envia "nada novo"; false = não envia se vazio
