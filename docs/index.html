@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Vigilância de Literatura — Ombro e Cotovelo</title>
+<meta name="theme-color" content="#0b5394">
+<meta name="description" content="Vigilância de literatura de ombro e cotovelo (PubMed, SciELO, OpenAlex).">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ombro&Cotovelo">
 <style>
   :root{
     --azul:#0b5394; --azul-claro:#eef6ff; --texto:#1f2933; --suave:#667085;
@@ -227,6 +235,13 @@ Promise.all([
   }
   aplica();
 });
+
+// Registra o service worker (necessário pra instalar como app / abrir offline).
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 </script>
 </body>
 </html>
