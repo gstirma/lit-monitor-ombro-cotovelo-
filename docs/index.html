@@ -62,13 +62,23 @@
   .doi{font-size:12px;color:var(--suave);margin-top:8px}
   .empty{text-align:center;color:var(--suave);padding:60px 20px}
   footer{max-width:880px;margin:0 auto;padding:0 18px 40px;font-size:11px;color:#98a2b3}
+  .headrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  #btnRefresh{flex:0 0 auto;width:42px;height:42px;border-radius:50%;border:none;
+    background:rgba(255,255,255,.18);color:#fff;font-size:22px;line-height:1;cursor:pointer}
+  #btnRefresh:hover{background:rgba(255,255,255,.30)}
+  #btnRefresh:active{transform:scale(.92)}
+  #btnRefresh.girando{animation:girar .6s linear infinite;pointer-events:none}
+  @keyframes girar{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <header>
-  <div class="wrap">
-    <h1>Vigilância de Literatura — Ombro e Cotovelo</h1>
-    <div class="sub" id="sub">carregando…</div>
+  <div class="wrap headrow">
+    <div>
+      <h1>Vigilância de Literatura — Ombro e Cotovelo</h1>
+      <div class="sub" id="sub">carregando…</div>
+    </div>
+    <button id="btnRefresh" title="Atualizar agora" aria-label="Atualizar agora">⟳</button>
   </div>
 </header>
 
@@ -198,9 +208,12 @@ function render(arr){
 
 function popular(sel, valores){
   const el = document.getElementById(sel);
+  const atual = el.value;                      // preserva a seleção do usuário
+  while (el.options.length > 1) el.remove(1);  // mantém só a 1ª ("Todas/Todos")
   [...new Set(valores)].filter(Boolean).sort((a,b)=>a.localeCompare(b)).forEach(v=>{
     const o = document.createElement("option"); o.value=v; o.textContent=v; el.appendChild(o);
   });
+  el.value = [...el.options].some(o=>o.value===atual) ? atual : "";
 }
 
 // Eventos
@@ -219,22 +232,35 @@ document.getElementById("subtemas").addEventListener("click", e=>{
   e.target.classList.add("on"); state.sub = e.target.dataset.sub; aplica();
 });
 
-// Carregamento
-Promise.all([
-  fetch("data/articles.json").then(r=>r.ok?r.json():[]).catch(()=>[]),
-  fetch("data/meta.json").then(r=>r.ok?r.json():null).catch(()=>null),
-]).then(([dados, meta])=>{
-  DADOS = Array.isArray(dados)?dados:[];
-  popular("fonte", DADOS.map(a=>a.source));
-  popular("periodico", DADOS.map(a=>a.journal));
+// Carregamento (force=true fura o cache e puxa a versão mais recente do servidor)
+async function carregarDados(force){
+  const btn = document.getElementById("btnRefresh");
   const sub = document.getElementById("sub");
-  if(meta){
-    sub.textContent = "Atualizado em "+meta.generated_at+" · "+meta.total+" artigo(s) no histórico";
-  } else {
-    sub.textContent = DADOS.length+" artigo(s) no histórico";
+  btn.classList.add("girando");
+  if (force) sub.textContent = "atualizando…";
+  const q = force ? ("?t=" + Date.now()) : "";
+  const opt = force ? { cache: "reload" } : {};
+  try {
+    const [dados, meta] = await Promise.all([
+      fetch("data/articles.json"+q, opt).then(r=>r.ok?r.json():[]).catch(()=>[]),
+      fetch("data/meta.json"+q, opt).then(r=>r.ok?r.json():null).catch(()=>null),
+    ]);
+    DADOS = Array.isArray(dados) ? dados : [];
+    popular("fonte", DADOS.map(a=>a.source));
+    popular("periodico", DADOS.map(a=>a.journal));
+    sub.textContent = meta
+      ? "Atualizado em "+meta.generated_at+" · "+meta.total+" artigo(s) no histórico"
+      : DADOS.length+" artigo(s) no histórico";
+    aplica();
+  } catch (e) {
+    sub.textContent = "Erro ao atualizar — verifique a conexão.";
+  } finally {
+    setTimeout(()=>btn.classList.remove("girando"), 600);
   }
-  aplica();
-});
+}
+
+document.getElementById("btnRefresh").addEventListener("click", ()=>carregarDados(true));
+carregarDados(false);
 
 // Registra o service worker (necessário pra instalar como app / abrir offline).
 if ("serviceWorker" in navigator) {
