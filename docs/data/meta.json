@@ -1,15 +1,15 @@
 {
- "generated_at": "2026-08-28 11:48 UTC",
- "generated_date": "2026-08-28",
- "total": 1386,
+ "generated_at": "2026-08-31 08:12 UTC",
+ "generated_date": "2026-08-31",
+ "total": 1421,
  "by_subtema": {
-  "Ombro": 878,
-  "Ombro e Cotovelo": 158,
-  "Cotovelo": 189,
+  "Ombro": 904,
+  "Ombro e Cotovelo": 162,
+  "Cotovelo": 194,
   "Geral": 161
  },
  "by_source": {
-  "PubMed": 745,
-  "OpenAlex": 641
+  "OpenAlex": 656,
+  "PubMed": 765
  }
 }
